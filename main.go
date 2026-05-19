@@ -14,18 +14,18 @@ func main() {
 	const filepathRoot = "."
 	const port = "8080"
 
-	apiCfg := apiConfig{
+	cfg := &apiConfig{
 		fileserverHits: atomic.Int32{},
 	}
 
 	mux := http.NewServeMux()
-	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
-	mux.Handle("/app/", fsHandler)
+	fileServer := http.FileServer(http.Dir(filepathRoot))
 
+	mux.Handle("GET /app/", cfg.middlewareMetricsInc(fileServer))
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
-
-	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
-	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
+	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
+	mux.HandleFunc("POST /admin/reset", cfg.handlerReset)
+	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -35,3 +35,4 @@ func main() {
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(srv.ListenAndServe())
 }
+
