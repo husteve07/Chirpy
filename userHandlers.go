@@ -4,7 +4,7 @@ import (
 	"github.com/google/uuid"
 	"time"
 	"encoding/json"
-	"github.com/husteve07/chirpy/internal/auth"
+	"github.com/husteve07/Chirpy/internal/auth"
 )
 
 type User struct {
