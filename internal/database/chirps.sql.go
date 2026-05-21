@@ -100,12 +100,111 @@ func (q *Queries) GetChirpByID(ctx context.Context, id uuid.UUID) (Chirp, error)
 	return i, err
 }
 
+const getChirpsByAuthorIDs = `-- name: GetChirpsByAuthorIDs :many
+SELECT id, created_at, updated_at, body, user_id FROM chirps WHERE user_id = $1
+`
+
+func (q *Queries) GetChirpsByAuthorIDs(ctx context.Context, userID uuid.UUID) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, getChirpsByAuthorIDs, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chirp
+	for rows.Next() {
+		var i Chirp
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getChirpsByUserID = `-- name: GetChirpsByUserID :many
 SELECT id, created_at, updated_at, body, user_id FROM chirps WHERE user_id = $1
 `
 
 func (q *Queries) GetChirpsByUserID(ctx context.Context, userID uuid.UUID) ([]Chirp, error) {
 	rows, err := q.db.QueryContext(ctx, getChirpsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chirp
+	for rows.Next() {
+		var i Chirp
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getChirpsSortedByCreatedAtAsc = `-- name: GetChirpsSortedByCreatedAtAsc :many
+SELECT id, created_at, updated_at, body, user_id FROM chirps ORDER BY created_at ASC
+`
+
+func (q *Queries) GetChirpsSortedByCreatedAtAsc(ctx context.Context) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, getChirpsSortedByCreatedAtAsc)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chirp
+	for rows.Next() {
+		var i Chirp
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getChirpsSortedByCreatedAtDesc = `-- name: GetChirpsSortedByCreatedAtDesc :many
+SELECT id, created_at, updated_at, body, user_id FROM chirps ORDER BY created_at DESC
+`
+
+func (q *Queries) GetChirpsSortedByCreatedAtDesc(ctx context.Context) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, getChirpsSortedByCreatedAtDesc)
 	if err != nil {
 		return nil, err
 	}
