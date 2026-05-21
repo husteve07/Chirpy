@@ -4,7 +4,7 @@ import (
 	"github.com/google/uuid"
 	"encoding/json"
 	"github.com/husteve07/Chirpy/internal/database"
-
+	"github.com/husteve07/Chirpy/internal/auth"
 )
 
 
@@ -13,7 +13,6 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 
 	type reqContent struct {
 		Body string `json:"body"`
-		UserID  uuid.UUID `json:"user_id"`
 	}
 
 	type returnVal struct {
@@ -39,9 +38,20 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 
 	defer r.Body.Close()
 
+	tokenStr, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Missing or invalid Authorization header", err)
+		return
+	}
+	UserID, err := auth.ValidateJWT(tokenStr, cfg.secretKey)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid token", err)
+		return
+	}
+
 	chirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body: cleanedBody,
-		UserID:  req.UserID,
+		UserID:  UserID,
 	})
 
 	if err != nil {
@@ -117,4 +127,45 @@ func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request
 	}
 
 	respondWithError(w, http.StatusNotFound, "No chirps found for this ID", nil)
+}
+
+func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request)  {
+
+	tokenStr, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Missing or invalid Authorization header", err)
+		return
+	}
+	userID, err := auth.ValidateJWT(tokenStr, cfg.secretKey)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid token", err)
+		return
+	}
+
+	chirpIDStr := r.PathValue("chirpID")
+	chirpID, err := uuid.Parse(chirpIDStr)
+
+	chirp, err := cfg.db.GetChirpByID(r.Context(), chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Chirp not found", err)
+		return
+	}
+
+	if chirp.UserID != userID {
+		respondWithError(w, http.StatusForbidden, "You don't have permission to delete this chirp", nil)
+		return
+	}
+
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid chirp ID", err)
+		return
+	}
+
+	err = cfg.db.DeleteChirp(r.Context(), chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't delete chirp", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+
 }
